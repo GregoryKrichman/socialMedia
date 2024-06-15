@@ -10,6 +10,7 @@ import Navbar from "./components/navbar/Navbar";
 import LeftBar from "./components/leftBar/LeftBar";
 import RightBar from "./components/rightBar/RightBar";
 import Home from "./pages/home/Home";
+import About from "./pages/about/About";
 import Profile from "./pages/profile/Profile";
 import "./style.scss";
 import { useContext } from "react";
@@ -19,9 +20,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 function App() {
   const { currentUser } = useContext(AuthContext);
-
   const { darkMode } = useContext(DarkModeContext);
-
   const queryClient = new QueryClient();
 
   const Layout = () => {
@@ -65,6 +64,10 @@ function App() {
         {
           path: "/profile/:id",
           element: <Profile />,
+        },
+        {
+          path: "/about",
+          element: <About />,
         },
       ],
     },

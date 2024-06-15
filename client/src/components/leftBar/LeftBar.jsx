@@ -10,7 +10,7 @@ import Gallery from "../../assets/8.png";
 import Videos from "../../assets/9.png";
 import Messages from "../../assets/10.png";
 import Tutorials from "../../assets/11.png";
-import Courses from "../../assets/12.png";
+import About from "../../assets/12.png"; // Renamed the image to About.png
 import Fund from "../../assets/13.png";
 import { AuthContext } from "../../context/authContext";
 import { useContext } from "react";
@@ -97,8 +97,13 @@ const LeftBar = () => {
             <span>Tutorials</span>
           </div>
           <div className="item">
-            <img src={Courses} alt="Courses" />
-            <span>Courses</span>
+            <Link
+              to="/about"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <img src={About} alt="About" />
+              <span>About</span>
+            </Link>
           </div>
         </div>
       </div>
