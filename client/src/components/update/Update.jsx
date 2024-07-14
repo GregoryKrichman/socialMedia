@@ -40,7 +40,7 @@ const Update = ({ setOpenUpdate, user, onUpdate }) => {
       profilePic: profilePicUrl,
     };
 
-    await makeRequest.put("/users", updatedUser);
+    await makeRequest.put(`/users/${user.id}`, updatedUser);
 
     onUpdate(updatedUser);
   };

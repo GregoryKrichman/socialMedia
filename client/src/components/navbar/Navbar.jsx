@@ -1,4 +1,4 @@
-import "./navbar.scss";
+import { Link } from "react-router-dom";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
 import WbSunnyOutlinedIcon from "@mui/icons-material/WbSunnyOutlined";
@@ -7,15 +7,14 @@ import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
-import { Link } from "react-router-dom";
-import { useContext } from "react";
-import { DarkModeContext } from "../../context/darkModeContext";
-import { AuthContext } from "../../context/authContext";
 import DefaultProfilePic from "../../assets/blank-profile-picture.png";
+import { useDarkMode } from "../../context/darkModeContext";
+import { useAuth } from "../../context/authContext";
+import "./navbar.scss";
 
 const Navbar = () => {
-  const { toggle, darkMode } = useContext(DarkModeContext);
-  const { currentUser, logout } = useContext(AuthContext);
+  const { toggleDarkMode, darkMode } = useDarkMode();
+  const { currentUser, handleLogout } = useAuth();
 
   return (
     <div className="navbar">
@@ -25,9 +24,9 @@ const Navbar = () => {
         </Link>
         <HomeOutlinedIcon />
         {darkMode ? (
-          <WbSunnyOutlinedIcon onClick={toggle} />
+          <WbSunnyOutlinedIcon onClick={toggleDarkMode} />
         ) : (
-          <DarkModeOutlinedIcon onClick={toggle} />
+          <DarkModeOutlinedIcon onClick={toggleDarkMode} />
         )}
         <GridViewOutlinedIcon />
         <div className="search">
@@ -39,18 +38,16 @@ const Navbar = () => {
         <PersonOutlinedIcon />
         <EmailOutlinedIcon />
         <NotificationsOutlinedIcon />
-        <div className="user">
-          <img
-            src={
-              currentUser.profilePic
-                ? `/upload/${currentUser.profilePic}`
-                : DefaultProfilePic
-            }
-            alt="Profile"
-          />
-          <span>{currentUser.name}</span>
-        </div>
-        <button className="logoutButton" onClick={logout}>
+        {currentUser && (
+          <div className="user">
+            <img
+              src={currentUser.profilePic || DefaultProfilePic}
+              alt="Profile"
+            />
+            <span>{currentUser.name}</span>
+          </div>
+        )}
+        <button className="logoutButton" onClick={handleLogout}>
           Logout
         </button>
       </div>

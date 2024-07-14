@@ -2,36 +2,54 @@ import "./rightBar.scss";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { makeRequest } from "../../axios";
 import DefaultProfilePic from "../../assets/blank-profile-picture.png";
+import { useState } from "react";
+import { useAuth } from "../../context/authContext";
 
 const RightBar = () => {
+  const { currentUser } = useAuth();
   const queryClient = useQueryClient();
+  const [suggestions, setSuggestions] = useState([]);
 
-  const { data: suggestions, isLoading: isLoadingSuggestions } = useQuery({
-    queryKey: "suggestions",
+  const { isLoading: isLoadingSuggestions } = useQuery({
+    queryKey: ["suggestions"],
     queryFn: () =>
-      makeRequest.get("/users/suggestions").then((res) => res.data),
+      makeRequest.get("/users/suggestions").then((res) => {
+        setSuggestions(res.data);
+        return res.data;
+      }),
   });
 
   const { data: latestActivities, isLoading: isLoadingActivities } = useQuery({
-    queryKey: "latestActivities",
+    queryKey: ["latestActivities"],
     queryFn: () =>
       makeRequest.get("/users/latestActivities").then((res) => res.data),
   });
 
   const { data: onlineFriends, isLoading: isLoadingOnlineFriends } = useQuery({
-    queryKey: "onlineFriends",
+    queryKey: ["onlineFriends"],
     queryFn: () =>
       makeRequest.get("/users/onlineFriends").then((res) => res.data),
   });
 
   const followMutation = useMutation({
     mutationFn: (userId) => {
-      return makeRequest.post("/relationships", { userId });
+      return makeRequest.post("/relationships", {
+        FollowerUserId: currentUser.userId,
+        FollowedUserId: userId,
+      });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: "suggestions" });
-      queryClient.invalidateQueries({ queryKey: "onlineFriends" });
-      queryClient.invalidateQueries({ queryKey: "latestActivities" });
+    onSuccess: (_, userId) => {
+      setSuggestions((prevSuggestions) =>
+        prevSuggestions.filter((user) => user.id !== userId)
+      );
+      queryClient.invalidateQueries(["onlineFriends"]);
+      queryClient.invalidateQueries(["latestActivities"]);
+    },
+    onError: (error) => {
+      console.error(
+        "Follow error:",
+        error.response ? error.response.data : error.message
+      );
     },
   });
 
@@ -40,7 +58,12 @@ const RightBar = () => {
   };
 
   const handleDismiss = (userId) => {
-    queryClient.invalidateQueries({ queryKey: "suggestions" });
+    setSuggestions((prevSuggestions) =>
+      prevSuggestions.filter((user) => user.id !== userId)
+    );
+    if (suggestions.length < 4) {
+      queryClient.invalidateQueries(["suggestions"]);
+    }
   };
 
   return (
@@ -51,13 +74,13 @@ const RightBar = () => {
           {isLoadingSuggestions ? (
             <div>Loading...</div>
           ) : (
-            suggestions?.map((user) => (
+            suggestions.slice(0, 3).map((user) => (
               <div className="user" key={user.id}>
                 <div className="userInfo">
                   <img
                     src={
                       user.profilePic
-                        ? `/upload/${user.profilePic}`
+                        ? `/uploads/${user.profilePic}`
                         : DefaultProfilePic
                     }
                     alt=""
@@ -79,7 +102,7 @@ const RightBar = () => {
           {isLoadingActivities ? (
             <div>Loading...</div>
           ) : (
-            latestActivities?.map((activity) => (
+            latestActivities?.slice(0, 3).map((activity) => (
               <div className="user" key={activity.id}>
                 <div className="userInfo">
                   <img
@@ -104,7 +127,7 @@ const RightBar = () => {
           {isLoadingOnlineFriends ? (
             <div>Loading...</div>
           ) : (
-            onlineFriends?.map((friend) => (
+            onlineFriends?.slice(0, 3).map((friend) => (
               <div className="user" key={friend.id}>
                 <div className="userInfo">
                   <img

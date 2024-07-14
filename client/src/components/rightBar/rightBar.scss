@@ -9,10 +9,10 @@
     overflow: scroll;
     background-color: themed("bgSoft");
 
-    @include mobile{
+    @include mobile {
       display: none;
     }
-    @include tablet{
+    @include tablet {
       display: none;
     }
 

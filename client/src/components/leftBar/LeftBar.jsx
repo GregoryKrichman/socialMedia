@@ -10,36 +10,26 @@ import Gallery from "../../assets/8.png";
 import Videos from "../../assets/9.png";
 import Messages from "../../assets/10.png";
 import Tutorials from "../../assets/11.png";
-import About from "../../assets/12.png"; // Renamed the image to About.png
+import About from "../../assets/12.png";
 import Fund from "../../assets/13.png";
-import { AuthContext } from "../../context/authContext";
-import { useContext } from "react";
-import { Link } from "react-router-dom";
+import { useAuth } from "../../context/authContext";
 import DefaultProfilePic from "../../assets/blank-profile-picture.png";
+import { Link } from "react-router-dom";
 
 const LeftBar = () => {
-  const { currentUser } = useContext(AuthContext);
+  const { currentUser } = useAuth();
 
   return (
     <div className="leftBar">
       <div className="container">
         <div className="menu">
-          <div className="user">
+          <Link to={`/profile/${currentUser.userId}`} className="user">
             <img
-              src={
-                currentUser.profilePic
-                  ? `/upload/${currentUser.profilePic}`
-                  : DefaultProfilePic
-              }
+              src={currentUser?.profilePic || DefaultProfilePic}
               alt="Profile"
             />
-            <Link
-              to={`/profile/${currentUser.id}`}
-              style={{ textDecoration: "none", color: "inherit" }}
-            >
-              <span>{currentUser.name}</span>
-            </Link>
-          </div>
+            <span>{currentUser.name || "Loading..."}</span>
+          </Link>
           <div className="item">
             <img src={Friends} alt="Friends" />
             <span>Friends</span>
@@ -96,15 +86,10 @@ const LeftBar = () => {
             <img src={Tutorials} alt="Tutorials" />
             <span>Tutorials</span>
           </div>
-          <div className="item">
-            <Link
-              to="/about"
-              style={{ textDecoration: "none", color: "inherit" }}
-            >
-              <img src={About} alt="About" />
-              <span>About</span>
-            </Link>
-          </div>
+          <Link to="/about" className="item">
+            <img src={About} alt="About" />
+            <span>About</span>
+          </Link>
         </div>
       </div>
     </div>

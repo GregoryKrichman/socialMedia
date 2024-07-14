@@ -1,45 +1,73 @@
-import { createContext, useEffect, useState } from "react";
-import axios from "axios";
+import { createContext, useContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { login, register, logout, getUser } from "../services/authService";
+import { jwtDecode } from "jwt-decode";
 
-export const AuthContext = createContext();
+const AuthContext = createContext();
 
 export const AuthContextProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(
-    JSON.parse(localStorage.getItem("user")) || null
-  );
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = async (inputs) => {
-    try {
-      const res = await axios.post(
-        "http://localhost:8800/api/auth/login",
-        inputs
-      );
-      setCurrentUser(res.data);
-    } catch (err) {
-      console.error("Login failed:", err);
-      throw err;
-    }
+  const navigate = useNavigate();
+
+  const handleLogin = async (inputs) => {
+    const response = await login(inputs);
+    const token = response.token;
+    const decodedUser = jwtDecode(token);
+    const userDetails = await getUser(decodedUser.userId);
+    const user = { token, ...decodedUser, ...userDetails };
+    setCurrentUser(user);
+    localStorage.setItem("token", token);
+    navigate("/profile/" + decodedUser.userId);
   };
 
-  const logout = async () => {
-    try {
-      await axios.post("http://localhost:8800/api/auth/logout");
-      setCurrentUser(null);
-    } catch (err) {
-      console.error("Logout failed:", err);
-      throw err;
-    }
+  const handleRegister = async (inputs) => {
+    const response = await register(inputs);
+    const token = response.token;
+    const decodedUser = jwtDecode(token);
+    const userDetails = await getUser(decodedUser.userId);
+    const user = { token, ...decodedUser, ...userDetails };
+    setCurrentUser(user);
+    localStorage.setItem("token", token);
+    navigate("/profile/" + decodedUser.userId);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setCurrentUser(null);
+    localStorage.removeItem("token");
+    navigate("/login");
   };
 
   useEffect(() => {
-    localStorage.setItem("user", JSON.stringify(currentUser));
-  }, [currentUser]);
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decodedUser = jwtDecode(token);
+      getUser(decodedUser.userId).then((userDetails) => {
+        const user = { token, ...decodedUser, ...userDetails };
+        setCurrentUser(user);
+        setIsLoading(false);
+      });
+    } else {
+      setIsLoading(false);
+    }
+  }, []);
 
   return (
     <AuthContext.Provider
-      value={{ currentUser, setCurrentUser, login, logout }}
+      value={{
+        currentUser,
+        isLoading,
+        handleLogin,
+        handleRegister,
+        handleLogout,
+        setCurrentUser,
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
+
+export const useAuth = () => useContext(AuthContext);

@@ -1,7 +1,8 @@
-import { Link } from "react-router-dom";
-import "./register.scss";
 import { useState } from "react";
-import axios from "axios";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/authContext";
+import { makeRequest } from "../../axios";
+import "./register.scss";
 
 const Register = () => {
   const [inputs, setInputs] = useState({
@@ -12,6 +13,8 @@ const Register = () => {
   });
   const [err, setErr] = useState(false);
   const [errMsg, setErrMsg] = useState("");
+  const navigate = useNavigate();
+  const { handleLogin, handleRegister, setCurrentUser } = useAuth();
 
   const handleChange = (e) => {
     setInputs((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -19,10 +22,16 @@ const Register = () => {
 
   const handleClick = async (e) => {
     e.preventDefault();
-
     try {
-      await axios.post("http://localhost:8800/api/auth/register", inputs);
-      setErr(false);
+      const res = await makeRequest.post("/auth/register", inputs);
+      if (res.data.token) {
+        const user = JSON.parse(atob(res.data.token.split(".")[1]));
+        localStorage.setItem("token", res.data.token);
+        setCurrentUser({ token: res.data.token, ...user });
+        navigate(`/profile/${user.userId}`);
+      } else {
+        throw new Error("Registration response data is undefined");
+      }
     } catch (err) {
       setErr(true);
       if (err.response && err.response.data) {
@@ -58,17 +67,20 @@ const Register = () => {
               placeholder="Username"
               name="username"
               onChange={handleChange}
+              autoComplete="username"
             />
             <input
               type="email"
               placeholder="Email"
               name="email"
               onChange={handleChange}
+              autoComplete="email"
             />
             <input
               type="password"
               placeholder="Password"
               name="password"
+              autoComplete="new-password"
               onChange={handleChange}
             />
             <input
@@ -76,6 +88,7 @@ const Register = () => {
               placeholder="Name"
               name="name"
               onChange={handleChange}
+              autoComplete="name"
             />
             <button type="button" onClick={handleClick}>
               Register

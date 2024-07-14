@@ -1,3 +1,11 @@
+import { useState, useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { makeRequest } from "../../axios";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/authContext";
+import Posts from "../../components/posts/Posts";
+import Update from "../../components/update/Update";
+import EditProfileForm from "../../components/editProfileForm/EditProfileForm";
 import "./profile.scss";
 import FacebookTwoToneIcon from "@mui/icons-material/FacebookTwoTone";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
@@ -8,87 +16,104 @@ import PlaceIcon from "@mui/icons-material/Place";
 import LanguageIcon from "@mui/icons-material/Language";
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import Posts from "../../components/posts/Posts";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { makeRequest } from "../../axios";
-import { useLocation } from "react-router-dom";
-import { useContext, useState } from "react";
-import { AuthContext } from "../../context/authContext";
-import Update from "../../components/update/Update";
+import DefaultProfilePic from "../../assets/blank-profile-picture.png";
 
 const Profile = () => {
   const [openUpdate, setOpenUpdate] = useState(false);
-  const { currentUser, setCurrentUser } = useContext(AuthContext);
-  const userId = parseInt(useLocation().pathname.split("/")[2]);
+  const [openEditProfile, setOpenEditProfile] = useState(false);
+  const { currentUser, setCurrentUser } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [userId, setUserId] = useState(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const queryClient = useQueryClient();
 
-  const {
-    isLoading: userLoading,
-    error,
-    data,
-  } = useQuery({
+  useEffect(() => {
+    const pathParts = location.pathname.split("/");
+    const extractedUserId = parseInt(pathParts[2], 10);
+
+    if (isNaN(extractedUserId)) {
+      navigate("/error");
+    } else {
+      setUserId(extractedUserId);
+    }
+  }, [location.pathname, navigate]);
+
+  useQuery({
     queryKey: ["user", userId],
     queryFn: async () => {
-      const response = await makeRequest.get("/users/find/" + userId);
+      const response = await makeRequest.get(`/users/find/${userId}`);
       return response.data;
+    },
+    enabled: userId !== null,
+    onSuccess: (data) => {
+      setCurrentUser(data);
     },
   });
 
-  const {
-    isLoading: relationshipLoading,
-    data: relationshipData,
-    error: relationshipError,
-  } = useQuery({
+  useQuery({
     queryKey: ["relationship", userId],
     queryFn: async () => {
       const response = await makeRequest.get(
-        "/relationships?followedUserId=" + userId
+        `/relationships?followedUserId=${userId}`
       );
       return response.data;
     },
+    enabled: userId !== null,
+    onSuccess: (data) => {
+      const isFollowing = data.some(
+        (relationship) => relationship.FollowerUserId === currentUser.userId
+      );
+      setIsFollowing(isFollowing);
+    },
   });
 
-  const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (following) => {
-      if (following)
-        return makeRequest.delete("/relationships?userId=" + userId);
-      return makeRequest.post("/relationships", { userId });
+    mutationFn: async (following) => {
+      const payload = {
+        FollowerUserId: currentUser.userId,
+        FollowedUserId: userId,
+      };
+      console.log("Payload:", payload);
+      if (following) {
+        return await makeRequest.delete(`/relationships`, { data: payload });
+      } else {
+        return await makeRequest.post("/relationships", payload);
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["relationship"] });
+      console.log("Mutation successful");
+      queryClient.invalidateQueries(["relationship", userId]);
+    },
+    onError: (error) => {
+      console.error("Error following/unfollowing user:", error);
     },
   });
 
   const handleFollow = () => {
-    if (relationshipData) {
-      mutation.mutate(relationshipData.includes(currentUser.id));
-    }
+    mutation.mutate(isFollowing);
+    setIsFollowing(!isFollowing);
   };
 
   const handleUpdate = (updatedUser) => {
     setCurrentUser(updatedUser);
-    setOpenUpdate(false);
-    queryClient.invalidateQueries({ queryKey: ["user", userId] });
+    setOpenEditProfile(false);
+    queryClient.invalidateQueries(["user", userId]);
   };
 
-  if (userLoading || relationshipLoading) return <div>Loading...</div>;
-  if (error || relationshipError) return <div>Error loading profile</div>;
+  if (!userId) return <div>Loading...</div>;
 
   return (
     <div className="profile">
       <div className="images">
         <img
-          src={
-            data.coverPic ? `/upload/${data.coverPic}` : "default_cover_pic_url"
-          }
+          src={currentUser?.coverPic ? currentUser.coverPic : DefaultProfilePic}
           alt=""
           className="cover"
         />
         <img
           src={
-            data.profilePic
-              ? `/upload/${data.profilePic}`
-              : "default_profile_pic_url"
+            currentUser?.profilePic ? currentUser.profilePic : DefaultProfilePic
           }
           alt=""
           className="profilePic"
@@ -114,24 +139,24 @@ const Profile = () => {
             </a>
           </div>
           <div className="center">
-            <span>{data?.name}</span>
+            <span>{currentUser?.name}</span>
             <div className="info">
               <div className="item">
                 <PlaceIcon />
-                <span>{data?.city}</span>
+                <span>{currentUser?.city}</span>
               </div>
               <div className="item">
                 <LanguageIcon />
-                <span>{data?.website}</span>
+                <span>{currentUser?.website}</span>
               </div>
             </div>
             {userId === currentUser.id ? (
-              <button onClick={() => setOpenUpdate(true)}>update</button>
+              <button onClick={() => setOpenEditProfile(true)}>
+                Edit Profile
+              </button>
             ) : (
               <button onClick={handleFollow}>
-                {relationshipData && relationshipData.includes(currentUser.id)
-                  ? "Following"
-                  : "Follow"}
+                {isFollowing ? "Unfollow" : "Follow"}
               </button>
             )}
           </div>
@@ -145,7 +170,14 @@ const Profile = () => {
       {openUpdate && (
         <Update
           setOpenUpdate={setOpenUpdate}
-          user={data}
+          user={currentUser}
+          onUpdate={handleUpdate}
+        />
+      )}
+      {openEditProfile && (
+        <EditProfileForm
+          user={currentUser}
+          onClose={() => setOpenEditProfile(false)}
           onUpdate={handleUpdate}
         />
       )}

@@ -1,14 +1,14 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
-export const DarkModeContext = createContext();
+const DarkModeContext = createContext();
 
 export const DarkModeContextProvider = ({ children }) => {
   const [darkMode, setDarkMode] = useState(
     JSON.parse(localStorage.getItem("darkMode")) || false
   );
 
-  const toggle = () => {
-    setDarkMode((prevMode) => !prevMode);
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
   };
 
   useEffect(() => {
@@ -16,8 +16,10 @@ export const DarkModeContextProvider = ({ children }) => {
   }, [darkMode]);
 
   return (
-    <DarkModeContext.Provider value={{ darkMode, toggle }}>
+    <DarkModeContext.Provider value={{ darkMode, toggleDarkMode }}>
       {children}
     </DarkModeContext.Provider>
   );
 };
+
+export const useDarkMode = () => useContext(DarkModeContext);
